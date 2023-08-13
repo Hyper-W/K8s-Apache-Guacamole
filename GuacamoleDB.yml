@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: guacamole-db
+  namespace: guacamole
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guacamole-db
+  template:
+    metadata:
+      labels:
+        app: guacamole-db
+    spec:
+      initContainers:
+        - name: guacamole-init
+          image: guacamole/guacamole
+          command: ["bash"]
+          args:
+            - -c
+            - /opt/guacamole/bin/initdb.sh --mysql > /opt/guacamole/dbinit/initdb.sql
+          volumeMounts:
+            - mountPath: "/opt/guacamole/dbinit"
+              name: init-db
+      containers:
+        - name: guacamole-db
+          image: mysql:8
+          envFrom:
+            - secretRef:
+                name: guacamole-common-db
+            - secretRef:
+                name: guacamole-db
+          volumeMounts:
+            - mountPath: "/var/lib/mysql"
+              name: guacamole-db
+            - mountPath: "/docker-entrypoint-initdb.d"
+              name: init-db
+      volumes:
+        - name: guacamole-db
+          persistentVolumeClaim:
+            claimName: guacamole-db
+        - name: init-db
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: guacamole-db
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole-db
+  namespace: guacamole
+spec:
+  type: ClusterIP
+  ports:
+    - name: guacamole-db
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: guacamole-db

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guacamole
+  namespace: guacamole
+data:
+  GUACD_HOSTNAME: "guacd"
+  MYSQL_HOSTNAME: guacamole-db
+  GUACAMOLE_HOME: "/guacamole"
